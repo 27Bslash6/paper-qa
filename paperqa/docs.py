@@ -1,3 +1,4 @@
+from .logger import LOGGER
 from typing import List, Optional, Tuple, Dict, Callable, Any
 from functools import reduce
 import os
@@ -64,7 +65,7 @@ class Docs:
         summary_llm: Optional[LLM] = None,
         name: str = "default",
         index_path: Optional[Path] = None,
-        model_name: str = 'gpt-3.5-turbo'
+        model_name: str = "gpt-3.5-turbo",
     ) -> None:
         """Initialize the collection of documents.
 
@@ -83,7 +84,12 @@ class Docs:
         self.keys = set()
         self._faiss_index = None
         if llm is None:
-            llm = OpenAIChat(temperature=0.1, max_tokens=512, prefix_messages=chat_pref, model_name=model_name)
+            llm = OpenAIChat(
+                temperature=0.1,
+                max_tokens=512,
+                prefix_messages=chat_pref,
+                model_name=model_name,
+            )
         if summary_llm is None:
             summary_llm = llm
         self.update_llm(llm, summary_llm)
@@ -112,12 +118,12 @@ class Docs:
         chunk_chars: Optional[int] = 3000,
     ) -> None:
         """Add a document to the collection."""
-        
-        # first check to see if we already have this document 
+
+        # first check to see if we already have this document
         # this way we don't make api call to create citation on file we already have
         if path in self.docs:
             raise ValueError(f"Document {path} already in collection.")
-        
+
         if citation is None:
             # peak first chunk
             texts, _ = read_doc(path, "", "", chunk_chars=chunk_chars)
@@ -125,7 +131,6 @@ class Docs:
                 citation = self.cite_chain.run(texts[0])
             if len(citation) < 3 or "Unknown" in citation or "insufficient" in citation:
                 citation = f"Unknown, {os.path.basename(path)}, {datetime.now().year}"
-
 
         if key is None:
             # get first name and year from citation
@@ -164,6 +169,8 @@ class Docs:
         self.docs[path] = dict(texts=texts, metadata=metadata, key=key)
         if self._faiss_index is not None:
             self._faiss_index.add_texts(texts, metadatas=metadata)
+
+        LOGGER.info(f"Added {path} to collection.")
 
     def clear(self) -> None:
         """Clear the collection of documents."""
